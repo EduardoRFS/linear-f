@@ -39,6 +39,8 @@ cat examples/weak.linf | dune exec check
 
 While this system doesn't include contraction in the general case, most cases(maybe all?) of System F cases can be explicitly done, by duplicating at call site. Very likely a "Graded F" could be elaborate to Linear F.
 
+But for simple dups, such as duplicating a boolean or an either, it can be done.
+
 ```shell
 cat examples/dup.linf | dune exec check
 ```
