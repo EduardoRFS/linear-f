@@ -1,0 +1,11 @@
+(executable
+ (name repl)
+ (public_name repl)
+ (modules Repl)
+ (libraries linf eio eio_main))
+
+(executable
+ (name check)
+ (public_name check)
+ (modules Check)
+ (libraries linf eio eio_main))
