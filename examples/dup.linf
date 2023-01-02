@@ -1,0 +1,87 @@
+type Unit === forall A. A -> A in
+let unit : Unit === fun (type A) x -> x in
+
+type Pair A B === forall K. (A -> B -> K) -> K in
+let pair (type A) (type B) (a : A) (b : B) : Pair A B ===
+  fun (type K) k -> k a b in
+
+type Garbage === forall K. (forall A. A -> K) -> K in
+let empty : Garbage === fun (type K) k -> k (type Unit) unit in
+let collect : forall A. A -> Garbage -> Garbage ===
+  fun (type A) x garbage ->
+  fun (type K) k -> k (type Pair A Garbage) (pair (type A) (type Garbage) x garbage) in
+
+type Weak A === Garbage -> Pair A Garbage in
+let pure : forall A. A -> Weak A ===
+  fun (type A) x ->
+  fun garbage -> pair (type A) (type Garbage) x garbage in
+let weak : forall A. A -> Weak Unit ===
+  fun (type A) x ->
+  fun garbage -> (
+    pair (type Unit) (type Garbage) unit
+      (collect (type A) x garbage)
+  ) in
+let bind : forall A B. Weak A -> (A -> Weak B) -> Weak B ===
+  fun (type A) (type B) m f ->
+  fun garbage -> (
+    let value_and_garbage === m garbage in
+    value_and_garbage (type Pair B Garbage) (fun x garbage -> f x garbage)
+  ) in
+let map : forall A B. Weak A -> (A -> B) -> Weak B ===
+  fun (type A) (type B) m f ->
+    bind (type A) (type B) m (fun x -> pure (type B) (f x)) in
+
+type Dup A === A -> Weak (Pair A A) in
+type Bool === forall A. A -> A -> Weak A in
+let true : Bool === fun (type A) x y ->
+  map (type Unit) (type A)
+    (weak (type A) y)
+    (fun unit -> unit (type A) x) in
+let false : Bool === fun (type A) x y ->
+  map (type Unit) (type A)
+    (weak (type A) x)
+    (fun unit -> unit (type A) y) in
+let dup_bool : Dup Bool ===
+  fun b ->
+    b (type Pair Bool Bool)
+      (pair (type Bool) (type Bool) true true)
+      (pair (type Bool) (type Bool) false false) in
+
+type Either A B === forall K. (A -> K) -> (B -> K) -> Weak K in
+let left : forall A B. A -> Either A B ===
+  fun (type A) (type B) a ->
+  fun (type K) l r ->
+    map (type Unit) (type K)
+      (weak (type B -> K) r)
+      (fun unit -> unit (type K) (l a)) in
+let right : forall A B. B -> Either A B ===
+  fun (type A) (type B) b ->
+  fun (type K) l r ->
+    map (type Unit) (type K)
+      (weak (type A -> K) l)
+      (fun unit -> unit (type K) (r b)) in
+let dup_either : forall A B. Dup A -> Dup B -> Dup (Either A B)  ===
+  fun (type A) (type B) dup_a dup_b e -> (
+    let wrap_left === fun (pair_a_a : Pair A A) ->
+      pair_a_a (type Pair (Either A B) (Either A B))
+        (fun a1 a2 -> pair (type Either A B) (type Either A B)
+          (left (type A) (type B) a1)
+          (left (type A) (type B) a2)) in
+    let wrap_right === fun (pair_b_b : Pair B B) ->
+      pair_b_b (type Pair (Either A B) (Either A B))
+        (fun b1 b2 -> pair (type Either A B) (type Either A B)
+          (right (type A) (type B) b1)
+          (right (type A) (type B) b2)) in
+    let nested : Weak (Weak (Pair (Either A B) (Either A B))) ===
+      e (type Weak (Pair (Either A B) (Either A B)))
+        (fun a ->
+          map (type Pair A A) (type Pair (Either A B) (Either A B))
+            (dup_a a) wrap_left)
+        (fun b ->
+          map (type Pair B B) (type Pair (Either A B) (Either A B))
+            (dup_b b) wrap_right) in
+    bind (type Weak (Pair (Either A B) (Either A B)))
+      (type (Pair (Either A B) (Either A B)))
+      nested (fun x -> x)
+  ) in
+dup_either
