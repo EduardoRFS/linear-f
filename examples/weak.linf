@@ -35,13 +35,13 @@ type Either A B === forall K. (A -> K) -> (B -> K) -> Weak K in
 let left : forall A B. A -> Either A B ===
   fun (type A) (type B) a ->
   fun (type K) l r ->
-    bind (type Unit) (type K)
+    map (type Unit) (type K)
       (weak (type B -> K) r)
-      (fun unit -> pure (type K) (unit (type K) (l a))) in
+      (fun unit -> unit (type K) (l a)) in
 let right : forall A B. B -> Either A B ===
   fun (type A) (type B) b ->
   fun (type K) l r ->
-    bind (type Unit) (type K)
+    map (type Unit) (type K)
       (weak (type A -> K) l)
-      (fun unit -> pure (type K) (unit (type K) (r b))) in
+      (fun unit -> unit (type K) (r b)) in
 right
